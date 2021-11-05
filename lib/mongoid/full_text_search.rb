@@ -147,7 +147,7 @@ module Mongoid::FullTextSearch
       cursors = ngrams.map do |ngram|
         query = { 
           'ngram' => if allow_partial_ngram && ngram[0].length < ngram_width
-                      ~r"^#{ngram[0]}"
+                      /^#{Regexp.quote(ngram[0])}/
                      else 
                       ngram[0]
                      end
