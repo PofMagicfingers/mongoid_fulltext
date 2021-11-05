@@ -131,6 +131,8 @@ module Mongoid::FullTextSearch
       end
       index_name = options.key?(:index) ? options.delete(:index) : mongoid_fulltext_config.keys.first
 
+      allow_partial_ngram = options.key?(:allow_partial_ngram) ? options.delete(:allow_partial_ngram) : false
+
       # Options hash should only contain filters after this point
 
       ngrams = all_ngrams(query_string, mongoid_fulltext_config[index_name])
@@ -140,9 +142,16 @@ module Mongoid::FullTextSearch
       # get a count of the number of index documents containing that n-gram
       ordering = { 'score' => -1 }
       limit = mongoid_fulltext_config[index_name][:max_candidate_set_size]
+      ngram_width = mongoid_fulltext_config[index_name][:ngram_width]
       coll = collection.database[index_name]
       cursors = ngrams.map do |ngram|
-        query = { 'ngram' => ngram[0] }
+        query = { 
+          'ngram' => if allow_partial_ngram && ngram[0].length < ngram_width
+                      ~r"^#{ngram[0]}"
+                     else 
+                      ngram[0]
+                     end
+        }
         query.update(map_query_filters(options))
         count = coll.find(query).count
         { ngram: ngram, count: count, query: query }
